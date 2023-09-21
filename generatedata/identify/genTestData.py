@@ -7,23 +7,24 @@ from ..utils.calculateFunctions import (
     calculateIonMobilityDistance,
     calculateIntesityDistanceSum,
 )
-from ..utils.peaksProcessFunctions import(
+from ..utils.peaksProcessFunctions import (
     divideLibraryByWindows,
     peaksMatch,
     fillMassSpectrumWithZeros
 )
 
+
 def peptideMatchMassSpectrumByPeaks(
-    libraryPath: str, 
-    massSpectrumFileRootPath: str, 
+    libraryPath: str,
+    massSpectrumFileRootPath: str,
     peptideMatchMs2PeakNums: int,
     tol: int = 15,
 ):
     """
     读取图谱库(正库/反库), 利用图谱库中肽段的理论图谱峰去匹配实验图谱, 峰匹配成功数量大于 3 则表示肽段与实验图谱匹配成功
-    
+
     我们只保留匹配成功的峰信息, 其余信息设为 0, 类似于下面
-    
+
     -   [肽段对应峰质荷比, 实验图谱对应峰强度]
     -   [0, 0]
 
@@ -34,7 +35,7 @@ def peptideMatchMassSpectrumByPeaks(
     最终返回下面的数据格式
     {
         -   (fileName, window): [
-        
+
             -   肽段匹配成功的多张图谱,
             -   肽段理论图谱,
             -   肽段标签,
@@ -52,13 +53,14 @@ def peptideMatchMassSpectrumByPeaks(
 
     ### Return:
     -   fileWindowPeptideMatchMassSpectrumInfo: 字典, key 值为 (fileName, window), value 为肽段匹配实验图谱信息及标签
-    
+
     具体信息如上所示 
     """
     delta = tol * 1e-6
     fileWindowPeptideMatchMassSpectrumInfo: Dict[Tuple, List] = {}
     root = massSpectrumFileRootPath + "/"
-    massSpectrumFilePathList = [root + filePath for filePath in os.listdir(massSpectrumFileRootPath) if filePath.endswith(".npy")]
+    massSpectrumFilePathList = [root + filePath for filePath in os.listdir(
+        massSpectrumFileRootPath) if filePath.endswith(".npy")]
     for msFilePath in massSpectrumFilePathList:
         fileName = msFilePath.split(".npy")[0].split("/")[-1]
         print(fileName)
@@ -66,46 +68,51 @@ def peptideMatchMassSpectrumByPeaks(
         massSpectrums = np.load(msFilePath, allow_pickle=True).item()
         windows = massSpectrums.keys()
         print("divide library by windows!")
-        library = divideLibraryByWindows(libraryPath, windows) 
+        library = divideLibraryByWindows(libraryPath, windows)
         print("end!")
         # 由于我们图谱库和实验图谱都是按照窗口划分的, 因此我们最外面应该是窗口循环
         peptideAllNum = 0
         for window in windows:        # 匹配也只在窗口内进行匹配
-            mzAfterTranverseList = [] # 存储每张质谱图左右偏移后的质荷比序列
+            mzAfterTranverseList = []  # 存储每张质谱图左右偏移后的质荷比序列
 
-            for ms2 in massSpectrums[window]: # 先将每张实验图谱的质荷比进行左右偏移, 将其存入 mzForMassSpectrum 中
-                mzAfterTranverse = calculateMassSpectrumMzTranverse(ms2[0], delta)
+            # 先将每张实验图谱的质荷比进行左右偏移, 将其存入 mzForMassSpectrum 中
+            for ms2 in massSpectrums[window]:
+                mzAfterTranverse = calculateMassSpectrumMzTranverse(
+                    ms2[0], delta)
                 mzAfterTranverseList.append(mzAfterTranverse)
-            
+
             peptideNum = 0
             for peptideNameWithCharge, peptideInfo in tqdm(library[window].items(), f"{window}"):
-                candidateMs2 = [] # 存储肽段匹配成功的实验图谱
-                candidateMs2IonMobility = [] # 存储肽段匹配成功的实验图谱的离子淌度 IonMobility
+                candidateMs2 = []  # 存储肽段匹配成功的实验图谱
+                candidateMs2IonMobility = []  # 存储肽段匹配成功的实验图谱的离子淌度 IonMobility
                 peptideMassSpectrum = peptideInfo["Spectrum"]
-                
+
                 for ms2_i, ms2 in enumerate(massSpectrums[window]):
-                    matchedPeaks = [] # 存储匹配的峰
+                    matchedPeaks = []  # 存储匹配的峰
                     massSpectrumPeaks = ms2[0]
                     mzAfterTranverse = mzAfterTranverseList[ms2_i]
-                    insertIndex, peakMatchedNum = peaksMatch(peptideMassSpectrum[:, 0], mzAfterTranverse)
+                    insertIndex, peakMatchedNum = peaksMatch(
+                        peptideMassSpectrum[:, 0], mzAfterTranverse)
                     if peakMatchedNum < peptideMatchMs2PeakNums:
                         continue
                     for i, index in enumerate(insertIndex):
                         if index == -1:
                             matchedPeaks.append([0.0, 0.0])
                         else:
-                            matchedPeaks.append([peptideMassSpectrum[i, 0], massSpectrumPeaks[index, 1]])
+                            matchedPeaks.append(
+                                [peptideMassSpectrum[i, 0], massSpectrumPeaks[index, 1]])
                     candidateMs2.append(matchedPeaks)
                     candidateMs2IonMobility.append(ms2[-1])
                 # end for massSpectrums
-                if len(candidateMs2) == 0: # 一张实验图谱都没有匹配上
+                if len(candidateMs2) == 0:  # 一张实验图谱都没有匹配上
                     continue
 
                 if (fileName, window) not in fileWindowPeptideMatchMassSpectrumInfo.keys():
-                    fileWindowPeptideMatchMassSpectrumInfo[(fileName, window)] = []
+                    fileWindowPeptideMatchMassSpectrumInfo[(
+                        fileName, window)] = []
 
                 fileWindowPeptideMatchMassSpectrumInfo[(fileName, window)].append([
-                    np.array(candidateMs2), 
+                    np.array(candidateMs2),
                     peptideMassSpectrum,
                     0,
                     peptideNameWithCharge,
@@ -113,12 +120,15 @@ def peptideMatchMassSpectrumByPeaks(
                 ])
                 peptideNum += 1
             # end for peptide
-            print(f"the {window} in file, {peptideNum} peptides has matched at least one Mass Spectrum")
+            print(
+                f"the {window} in file, {peptideNum} peptides has matched at least one Mass Spectrum")
             peptideAllNum += peptideNum
         # end for window
-        print(f"file, {peptideAllNum} peptides has matched at least one Mass Spectrum")
+        print(
+            f"file, {peptideAllNum} peptides has matched at least one Mass Spectrum")
     # end for file
     return np.array(fileWindowPeptideMatchMassSpectrumInfo, dtype=object)
+
 
 def filterNumsMassSpectrumByFeatures(
     libraryPath: str,
@@ -163,26 +173,34 @@ def filterNumsMassSpectrumByFeatures(
     """
     library = np.load(libraryPath, allow_pickle=True).item()
     # 将所有信息存入对应的列表中
-    peptideMatchedMassSpectrumPeaks: List[np.ndarray] = [] # 肽段匹配的实验图谱峰信息
-    peptideMatchedMassSpectrumIonMobility:List[np.ndarray] = [] # 肽段匹配的实验图谱淌度信息
-    peptideMassSpectrumPeaks:List[np.ndarray] = [] # 肽段参考图谱峰信息
-    peptideTarget: List[int] = [] # 肽段标签
-    peptideIonMobility: List[float] = [] # 肽段淌度信息
-    peptideRealtiveInfo: List[Tuple[str, Tuple[int, int], Tuple[str, str]]] = [] # 肽段相关信息 (file, window, (name, charge)) 
-    
+    peptideMatchedMassSpectrumPeaks: List[np.ndarray] = []  # 肽段匹配的实验图谱峰信息
+    # 肽段匹配的实验图谱淌度信息
+    peptideMatchedMassSpectrumIonMobility: List[np.ndarray] = []
+    peptideMassSpectrumPeaks: List[np.ndarray] = []  # 肽段参考图谱峰信息
+    peptideTarget: List[int] = []  # 肽段标签
+    peptideIonMobility: List[float] = []  # 肽段淌度信息
+    # 肽段相关信息 (file, window, (name, charge))
+    peptideRealtiveInfo: List[Tuple[str,
+                                    Tuple[int, int], Tuple[str, str]]] = []
+
     for fileWindow, peptideInfo in tqdm(peptideMatchedMassSpectrumsInfo.items(), "extracting information!"):
         # peptideInfo[0], peptideInfo[-1] = fillMassSpectrumWithZeros(
         #                                         np.array(peptideInfo[0]),
         #                                         filterMassSpectrumNums,
         #                                         peptidePeakNums,
-        #                                         np.array(peptideInfo[-1])) 
+        #                                         np.array(peptideInfo[-1]))
         # 信息存储对应列表中
-        peptideMatchedMassSpectrumPeaks.append(np.array(peptideInfo[0]))
-        peptideMatchedMassSpectrumIonMobility.append(np.array(peptideInfo[-1]))
-        peptideMassSpectrumPeaks.append(np.array(peptideInfo[1]))
-        peptideTarget.append(peptideInfo[2])
-        peptideIonMobility.append(library[peptideInfo[-2]]["IonMobility"])
-        peptideRealtiveInfo.append((fileWindow[0], fileWindow[1], peptideInfo[-2]))
+        for peptidei in range(len(peptideInfo)):
+            peptideMatchedMassSpectrumPeaks.append(
+                np.array(peptideInfo[peptidei][0]))
+            peptideMatchedMassSpectrumIonMobility.append(
+                np.array(peptideInfo[peptidei][-1]))
+            peptideMassSpectrumPeaks.append(np.array(peptideInfo[peptidei][1]))
+            peptideTarget.append(peptideInfo[peptidei][2])
+            peptideIonMobility.append(
+                library[peptideInfo[peptidei][-2]]["IonMobility"])
+            peptideRealtiveInfo.append(
+                (fileWindow[0], fileWindow[1], peptideInfo[peptidei][-2]))
 
     # 存储肽段和它匹配成功的实验图谱的淌度差值
     peptideMs2IonMobilityDistance: List[np.ndarray] = []
@@ -190,32 +208,34 @@ def filterNumsMassSpectrumByFeatures(
     # 计算肽段和匹配成功的图谱的淌度差值
     for ms2i, ms2IonMobility in enumerate(tqdm(peptideMatchedMassSpectrumIonMobility, "calculating IonMobility distance!")):
         calculateIonMobilityDistance(
-                                    ms2IonMobility, 
-                                    peptideIonMobility[ms2i],
-                                    peptideMs2IonMobilityDistance)
+            ms2IonMobility,
+            peptideIonMobility[ms2i],
+            peptideMs2IonMobilityDistance)
 
     # 存储肽段和它匹配成功的实验图谱的归一化哈密顿距离和
     peptideMs2PeaksIntensityDistanceSum: List[np.ndarray] = []
 
     for peptidei, ionMobilityDistance in enumerate(tqdm(peptideMs2IonMobilityDistance, "first filting mass Spectrums by IonMobility!")):
         # 筛选出淌度差值小于设定阈值的实验图谱对应下标
-        selectedIndex = (ionMobilityDistance < mobilityDistanceThreshold).nonzero()
+        selectedIndex = (ionMobilityDistance <
+                         mobilityDistanceThreshold).nonzero()
         # 如果它匹配的所有的图谱淌度差都大于阈值, 则我们只留下淌度差值最小的, 再进行填充
         if len(selectedIndex) == 0:
             index = np.argmin(ionMobilityDistance)
-            peptideMatchedMassSpectrumPeaks[peptidei] = peptideMassSpectrumPeaks[peptidei][index]
-            peptideMatchedMassSpectrumIonMobility = peptideMatchedMassSpectrumIonMobility[peptidei][index]
+            peptideMatchedMassSpectrumPeaks[peptidei] = peptideMatchedMassSpectrumPeaks[peptidei][index]
+            peptideMatchedMassSpectrumIonMobility = peptideMatchedMassSpectrumIonMobility[
+                peptidei][index]
         else:
-            peptideMatchedMassSpectrumPeaks[peptidei] = peptideMassSpectrumPeaks[peptidei][selectedIndex]
+            peptideMatchedMassSpectrumPeaks[peptidei] = peptideMatchedMassSpectrumPeaks[peptidei][selectedIndex]
             peptideMatchedMassSpectrumIonMobility[peptidei] = peptideMatchedMassSpectrumIonMobility[peptidei][selectedIndex]
-        
+
         # 填充 0
-        (   peptideMatchedMassSpectrumPeaks[peptidei], 
+        (peptideMatchedMassSpectrumPeaks[peptidei],
             peptideMatchedMassSpectrumIonMobility[peptidei]
-        ) = fillMassSpectrumWithZeros(peptideMassSpectrumPeaks[peptidei],
-                                    filterMassSpectrumNums,
-                                    peptidePeakNums,
-                                    peptideMatchedMassSpectrumIonMobility[peptidei])
+         ) = fillMassSpectrumWithZeros(peptideMatchedMassSpectrumPeaks[peptidei],
+                                       filterMassSpectrumNums,
+                                       peptidePeakNums,
+                                       peptideMatchedMassSpectrumIonMobility[peptidei])
         # 计算肽段和相关图谱的哈密顿距离和
         calculateIntesityDistanceSum(
             peptideMatchedMassSpectrumPeaks[peptidei][:, :, 1],
@@ -252,7 +272,8 @@ def filterNumsMassSpectrumByFeatures(
     # 避免文件出现多条相同的肽段, 但是感觉这种担忧毫不必要
     for peptidei, _ in enumerate(tqdm(peptideTarget)):
         if peptideRealtiveInfo[peptidei][2] not in fileDict[peptideRealtiveInfo[peptidei][0]]:
-            fileDict[peptideRealtiveInfo[peptidei][0]].add(peptideRealtiveInfo[peptidei][2])
+            fileDict[peptideRealtiveInfo[peptidei][0]].add(
+                peptideRealtiveInfo[peptidei][2])
             filterIndex.append(peptidei)
             # trainPeptideMatchedMassSpectrumPeaks.append(peptideMatchedMassSpectrumPeaks[peptidei])
             # trainPeptideMatchedMassSpectrumIonMobility.append(peptideMatchedMassSpectrumIonMobility[peptidei])
@@ -262,21 +283,25 @@ def filterNumsMassSpectrumByFeatures(
             # trainPeptideRealtiveInfo.append(peptideRealtiveInfo[peptidei])
     # end for target
 
-    peptideMatchedMassSpectrumPeaks = np.array(peptideMatchedMassSpectrumPeaks) # type: ignore
-    peptideMassSpectrumPeaks = np.array(peptideMassSpectrumPeaks)  # type: ignore
+    peptideMatchedMassSpectrumPeaks = np.array(
+        peptideMatchedMassSpectrumPeaks)  # type: ignore
+    peptideMassSpectrumPeaks = np.array(
+        peptideMassSpectrumPeaks)  # type: ignore
     peptideTarget = np.array(peptideTarget)  # type: ignore
-    peptideRealtiveInfo = np.array(peptideRealtiveInfo, dtype=object)  # type: ignore
-    peptideMatchedMassSpectrumIonMobility = np.array(peptideMatchedMassSpectrumIonMobility) # type: ignore
-    peptideIonMobility = np.array(peptideIonMobility) # type: ignore
+    peptideRealtiveInfo = np.array(
+        peptideRealtiveInfo, dtype=object)  # type: ignore
+    peptideMatchedMassSpectrumIonMobility = np.array(
+        peptideMatchedMassSpectrumIonMobility)  # type: ignore
+    peptideIonMobility = np.array(peptideIonMobility)  # type: ignore
     filterIndex = np.array(filterIndex)
 
     return np.array([
-        peptideMatchedMassSpectrumPeaks[filterIndex],
-        peptideMassSpectrumPeaks[filterIndex],
-        peptideTarget[filterIndex],
-        peptideRealtiveInfo[filterIndex],
-        peptideMatchedMassSpectrumIonMobility[filterIndex],
-        peptideIonMobility[filterIndex]
+        list(peptideMatchedMassSpectrumPeaks[filterIndex]),
+        list(peptideMassSpectrumPeaks[filterIndex]),
+        list(peptideTarget[filterIndex]),  # type: ignore
+        list(peptideRealtiveInfo[filterIndex]),
+        list(peptideMatchedMassSpectrumIonMobility[filterIndex]),
+        list(peptideIonMobility[filterIndex])  # type: ignore
     ], dtype=object)
 
 
@@ -287,6 +312,7 @@ if __name__ == "__main__":
     decoyLibraryPath = args[2]
     massSpectrumFileRootPath = args[3]
     peptideMatchMs2PeakNums = int(args[4])
+    filterMassSpectrumNums = 6
     tempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksData.npy"
     testDataSavePath = "plasmaPeptideMatchMassSpectrumfilterData.npy"
     decoyTempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
@@ -303,35 +329,35 @@ if __name__ == "__main__":
     # nohup python -u "genTrainData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy 20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
 
     data = peptideMatchMassSpectrumByPeaks(
-        libraryPath, 
-        massSpectrumFileRootPath, 
+        libraryPath,
+        massSpectrumFileRootPath,
         peptideMatchMs2PeakNums
-)
+    )
     np.save(tempDataSavePath, data)
-    
+
     data = np.load(tempDataSavePath, allow_pickle=True).item()
     filterData = filterNumsMassSpectrumByFeatures(
-                                            libraryPath,
-                                            data,
-                                            peptideMatchMs2PeakNums,
-                                            peptidePeakNums,
-                                            mobilityDistanceThreshold
-                                        )
-    np.save(testDataSavePath, filterData)
+        libraryPath,
+        data,
+        filterMassSpectrumNums,
+        peptidePeakNums,
+        mobilityDistanceThreshold
+    )
+    np.save(testDataSavePath, filterData)  # type: ignore
 
     decoyData = peptideMatchMassSpectrumByPeaks(
-        decoyLibraryPath, 
-        massSpectrumFileRootPath, 
+        decoyLibraryPath,
+        massSpectrumFileRootPath,
         peptideMatchMs2PeakNums,
     )
     np.save(decoyTempDataSavePath, decoyData)
 
     data = np.load(decoyTempDataSavePath, allow_pickle=True).item()
     filterData = filterNumsMassSpectrumByFeatures(
-                                            decoyLibraryPath,
-                                            data,
-                                            peptideMatchMs2PeakNums,
-                                            peptidePeakNums,
-                                            mobilityDistanceThreshold,
-                                        )
+        decoyLibraryPath,
+        data,
+        filterMassSpectrumNums,
+        peptidePeakNums,
+        mobilityDistanceThreshold,
+    )
     np.save(decoyTestDataSavePath, filterData)
