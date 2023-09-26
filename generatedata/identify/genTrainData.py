@@ -319,45 +319,44 @@ def filterNumsMassSpectrumByFeatures(
     ], dtype=object)
 
 
-if __name__ == "__main__":
-    import sys
-    args = sys.argv
-    libraryPath = args[1]
-    decoyLibraryPath = args[2]
-    targetFilePath = args[3]
-    massSpectrumFileRootPath = args[4]
-    peptideMatchMs2PeakNums = int(args[5])
+def main():
+    massSpectrumFileRootPath = "/data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC"
+    peptideMatchMs2PeakNums = 3
     filterMassSpectrumNums = 6
-    tempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksData.npy"
-    trainDataSavePath = "plasmaPeptideMatchMassSpectrumfilterData.npy"
-    decoyTempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
-    decoyTrainDataSavePath = "plasmaPeptideMatchMassSpectrumfilterData.npy"
     peptidePeakNums = 6
     mobilityDistanceThreshold = 100
-    print(libraryPath)
-    print(targetFilePath)
-    print(massSpectrumFileRootPath)
-    print(peptideMatchMs2PeakNums)
-    if len(args) > 6:
-        tol = int(args[5])
-    # python -u "genTrainData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy 20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
-    # nohup python -u "genTrainData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy 20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
-    data = peptideMatchMassSpectrumByPeaks(
-        libraryPath,
-        massSpectrumFileRootPath,
-        targetFilePath,
-        peptideMatchMs2PeakNums
-    )
-    np.save(tempDataSavePath, data)
-    data = np.load(tempDataSavePath, allow_pickle=True).item()
-    filterData = filterNumsMassSpectrumByFeatures(
-        libraryPath,
-        data,
-        filterMassSpectrumNums,
-        peptidePeakNums,
-        mobilityDistanceThreshold
-    )
-    np.save(trainDataSavePath, filterData)
+    rootPath = massSpectrumFileRootPath + "/testCode/"
+    libraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_norm_peak6.npy"
+    decoyLibraryPath = rootPath + \
+        "library/20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy"
+    targetFilePath = rootPath + \
+        "spectronautLabel/plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy"
+    tempDataSavePath = rootPath + \
+        "trainData/identify/targetData/plasmaPeptideMatchMassSpectrumByPeaksData.npy"
+    trainDataSavePath = rootPath + \
+        "trainData/identify/targetData/plasmaPeptideMatchMassSpectrumfilterData.npy"
+    decoyTempDataSavePath = rootPath + \
+        "trainData/identify/decoyData/plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
+    decoyTrainDataSavePath = rootPath + \
+        "trainData/identify/decoyData/plasmaPeptideMatchMassSpectrumfilterData.npy"
+
+    # data = peptideMatchMassSpectrumByPeaks(
+    #     libraryPath,
+    #     massSpectrumFileRootPath,
+    #     targetFilePath,
+    #     peptideMatchMs2PeakNums
+    # )
+    # np.save(tempDataSavePath, data)
+
+    # data = np.load(tempDataSavePath, allow_pickle=True).item()
+    # filterData = filterNumsMassSpectrumByFeatures(
+    #     libraryPath,
+    #     data,
+    #     filterMassSpectrumNums,
+    #     peptidePeakNums,
+    #     mobilityDistanceThreshold
+    # )
+    # np.save(trainDataSavePath, filterData)
 
     decoyData = peptideMatchMassSpectrumByPeaks(
         decoyLibraryPath,
@@ -378,3 +377,72 @@ if __name__ == "__main__":
         isDecoy=True
     )
     np.save(decoyTrainDataSavePath, filterData)
+
+
+if __name__ == "__main__":
+    main()
+    # import sys
+    # args = sys.argv
+    # libraryPath = args[1]
+    # decoyLibraryPath = args[2]
+    # targetFilePath = args[3]
+    # massSpectrumFileRootPath = args[4]
+    # peptideMatchMs2PeakNums = int(args[5])
+    # massSpectrumFileRootPath = "/data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC"
+    # peptideMatchMs2PeakNums = 3
+    # filterMassSpectrumNums = 6
+    # peptidePeakNums = 6
+    # mobilityDistanceThreshold = 100
+    # rootPath = "../../"
+    # libraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_norm_peak6.npy"
+    # decoyLibraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy"
+    # targetFilePath = rootPath + "spectronautLabel/plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy"
+    # tempDataSavePath = rootPath + "trainData/identify/targetData/plasmaPeptideMatchMassSpectrumByPeaksData.npy"
+    # trainDataSavePath = rootPath + "trainData/identify/targetData/plasmaPeptideMatchMassSpectrumfilterData.npy"
+    # decoyTempDataSavePath = rootPath + "trainData/identify/decoyData/plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
+    # decoyTrainDataSavePath = rootPath + "trainData/identify/decoyData/plasmaPeptideMatchMassSpectrumfilterData.npy"
+    # print(libraryPath)
+    # print(targetFilePath)
+    # print(massSpectrumFileRootPath)
+    # print(peptideMatchMs2PeakNums)
+    # if len(args) > 6:
+    #     tol = int(args[5])
+
+    # python -u "genTrainData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy 20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
+    # nohup python -u "genTrainData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy 20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy plasma_1_2_3_4_6_7_8_9_Spectronaut_identifyLabel.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
+    # data = peptideMatchMassSpectrumByPeaks(
+    #     libraryPath,
+    #     massSpectrumFileRootPath,
+    #     targetFilePath,
+    #     peptideMatchMs2PeakNums
+    # )
+    # np.save(tempDataSavePath, data)
+    # data = np.load(tempDataSavePath, allow_pickle=True).item()
+    # filterData = filterNumsMassSpectrumByFeatures(
+    #     libraryPath,
+    #     data,
+    #     filterMassSpectrumNums,
+    #     peptidePeakNums,
+    #     mobilityDistanceThreshold
+    # )
+    # np.save(trainDataSavePath, filterData)
+
+    # decoyData = peptideMatchMassSpectrumByPeaks(
+    #     decoyLibraryPath,
+    #     massSpectrumFileRootPath,
+    #     targetFilePath,
+    #     peptideMatchMs2PeakNums,
+    #     isDecoy=True
+    # )
+    # np.save(decoyTempDataSavePath, decoyData)
+
+    # data = np.load(decoyTempDataSavePath, allow_pickle=True).item()
+    # filterData = filterNumsMassSpectrumByFeatures(
+    #     decoyLibraryPath,
+    #     data,
+    #     filterMassSpectrumNums,
+    #     peptidePeakNums,
+    #     mobilityDistanceThreshold,
+    #     isDecoy=True
+    # )
+    # np.save(decoyTrainDataSavePath, filterData)

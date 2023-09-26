@@ -48,7 +48,6 @@ def peptideMatchMassSpectrumByPeaks(
     -   `libraryPath`: 图谱库文件路径
     -   `massSpectrumFilePathList`: 经峰合并操作后的质谱数据文件路径列表
     -   `peptideMatchMs2PeakNums`: 肽段和实验图谱峰匹配成功个数 (肽段和实验图谱匹配成功的标志)
-    -   `targetFilePath`: 肽段的标签文件路径 (我们是使用 Spectronaut 的结果进行训练)
     -   `tol`: 峰匹配的上限值 (tims-TOF 仪器产生的数据为 15, TripleTOF 仪器产生的数据为 30, ppm 浓度为 1*e-6)
 
     ### Return:
@@ -166,7 +165,6 @@ def filterNumsMassSpectrumByFeatures(
     -   `filterMassSpectrumNums`: 需要筛选最相关的实验图谱数量
     -   `peptidePeakNums`: 肽段参考图谱峰的个数
     -   `mobilityDistanceThreshold`: 淌度差值阈值
-    -   `isDecoy`: 是否为诱饵库
 
     ### Return:
     -   `TrainData`: 筛选过后的肽段最相关的 s 个实验图谱数据以及其对应的淌度信息
@@ -305,26 +303,18 @@ def filterNumsMassSpectrumByFeatures(
     ], dtype=object)
 
 
-if __name__ == "__main__":
-    import sys
-    args = sys.argv
-    libraryPath = args[1]
-    massSpectrumFileRootPath = args[2]
-    peptideMatchMs2PeakNums = int(args[3])
+def main():
+    peptideMatchMs2PeakNums = 3
     filterMassSpectrumNums = 6
-    tempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksData.npy"
-    testDataSavePath = "plasmaPeptideMatchMassSpectrumfilterData.npy"
-    decoyTempDataSavePath = "plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
-    decoyTestDataSavePath = "plasmaPeptideMatchMassSpectrumfilterDataDecoy.npy"
     peptidePeakNums = 6
     mobilityDistanceThreshold = 100
-    print(libraryPath)
-    print(massSpectrumFileRootPath)
-    print(peptideMatchMs2PeakNums)
-    if len(args) > 4:
-        tol = int(args[4])
-    # python -u "genTestData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
-    # nohup python -u "genTestData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
+    massSpectrumFileRootPath = "/data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC"
+    rootPath = massSpectrumFileRootPath + "/testCode/"
+    libraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_norm_peak6.npy"
+    tempDataSavePath = rootPath + \
+        "testData/quant/targetData/plasmaPeptideMatchMassSpectrumByPeaksData.npy"
+    testDataSavePath = rootPath + \
+        "testData/quant/targetData/plasmaPeptideMatchMassSpectrumfilterData.npy"
 
     data = peptideMatchMassSpectrumByPeaks(
         libraryPath,
@@ -342,3 +332,48 @@ if __name__ == "__main__":
         mobilityDistanceThreshold
     )
     np.save(testDataSavePath, filterData)
+
+
+if __name__ == "__main__":
+    main()
+    # import sys
+    # args = sys.argv
+    # libraryPath = args[1]
+    # massSpectrumFileRootPath = args[2]
+    # peptideMatchMs2PeakNums = int(args[3])
+    # peptideMatchMs2PeakNums = 3
+    # filterMassSpectrumNums = 6
+    # peptidePeakNums = 6
+    # mobilityDistanceThreshold = 100
+    # massSpectrumFileRootPath = "/data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC"
+    # rootPath = "../../"
+    # libraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_norm_peak6.npy"
+    # decoyLibraryPath = rootPath + "library/20220112_MN_plasma_DDA_library_im_decoy_params_100_norm_peak6.npy"
+    # tempDataSavePath = rootPath + "testData/quant/targetData/plasmaPeptideMatchMassSpectrumByPeaksData.npy"
+    # testDataSavePath = rootPath + "testData/quant/targetData/plasmaPeptideMatchMassSpectrumfilterData.npy"
+    # decoyTempDataSavePath = rootPath + "testData/quant/decoyData/plasmaPeptideMatchMassSpectrumByPeaksDataDecoy.npy"
+    # decoyTestDataSavePath = rootPath + "testData/quant/decoyData/plasmaPeptideMatchMassSpectrumfilterDataDecoy.npy"
+    # print(libraryPath)
+    # print(massSpectrumFileRootPath)
+    # print(peptideMatchMs2PeakNums)
+    # if len(args) > 4:
+    #     tol = int(args[4])
+    # python -u "genTestData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
+    # nohup python -u "genTestData.py" 20220112_MN_plasma_DDA_library_im_norm_peak6.npy /data/xp/data/tims-TOF_20211002_30min_LCH_MN_144-Plasma_SPEED-DIA_300ng_mix-qc/mzml/Identify/QC 3
+
+    # data = peptideMatchMassSpectrumByPeaks(
+    #     libraryPath,
+    #     massSpectrumFileRootPath,
+    #     peptideMatchMs2PeakNums
+    # )
+    # np.save(tempDataSavePath, data)
+
+    # data = np.load(tempDataSavePath, allow_pickle=True).item()
+    # filterData = filterNumsMassSpectrumByFeatures(
+    #     libraryPath,
+    #     data,
+    #     filterMassSpectrumNums,
+    #     peptidePeakNums,
+    #     mobilityDistanceThreshold
+    # )
+    # np.save(testDataSavePath, filterData)
